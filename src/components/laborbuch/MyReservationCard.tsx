@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { formatHourRange } from '@/lib/slots'
 import type { Machine } from '@/hooks/use-machines'
+import extrudor from '@/assets/extrudor.webp'
 
 const WEEKDAYS = [
   'Sonntag',
@@ -50,40 +51,43 @@ export function MyReservationCard({
   cancelling,
 }: Props) {
   return (
-    <article className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-card p-4">
-      <div className="min-w-0 flex-1 space-y-3">
+    <article className="relative bg-white overflow-hidden border-t py-6 sm:border-0 sm:outline sm:outline-1 sm:outline-border sm:px-6">
+      <div className="absolute inset-y-0 right-0 z-0 w-2/3 translate-x-1/4">
+        <img
+          src={extrudor}
+          alt=""
+          className="h-full w-auto object-cover object-left"
+        />
+      </div>
+
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full bg-gradient-to-tr from-white to-white/0" />
+
+      <div className="relative z-20 min-w-0 space-y-3 flex flex-col gap-8">
         <div className="space-y-0.5">
-          <h3 className="text-base font-semibold leading-tight">
+          <h3 className="text-md font-semibold leading-tight">
             {machine?.name ?? '—'}
           </h3>
+
           {machine?.description && (
             <p className="text-sm text-muted-foreground">
               {machine.description}
             </p>
           )}
-          <p className="text-sm font-medium text-success">
+
+          <p className="text-sm font-regular text-success">
             {formatGermanDate(date)}, {formatHourRange(startHour, endHourExclusive)}
           </p>
         </div>
+
         <Button
           variant="secondary"
-          size="default"
+          size="sm"
           onClick={onCancel}
           disabled={cancelling}
-          className="w-full sm:w-auto"
         >
           Absagen
         </Button>
       </div>
-      {machine?.image_url && (
-        <div className="hidden h-20 w-24 shrink-0 sm:block">
-          <img
-            src={machine.image_url}
-            alt=""
-            className="h-full w-full rounded-xl object-cover"
-          />
-        </div>
-      )}
     </article>
   )
 }

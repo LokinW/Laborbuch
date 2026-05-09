@@ -155,7 +155,7 @@ export default function DashboardPage() {
           {reservationsQ.isLoading ? (
             <p className="text-sm text-muted-foreground">Lädt…</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
               {myBookings.map((b) => (
                 <MyReservationCard
                   key={`${b.machineId}-${b.date}-${b.startHour}`}
@@ -174,7 +174,7 @@ export default function DashboardPage() {
 
         {favoriteMachines.length > 0 && (
           <Section title="Favorisierte Geräte">
-            <div className="rounded-2xl border border-border bg-card px-5">
+            <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
               {favoriteMachines.map(renderMachineCard)}
             </div>
           </Section>
