@@ -23,16 +23,16 @@ import {
 import { useAuth } from '@/lib/auth'
 import type { Machine } from '@/hooks/use-machines'
 
-const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr']
+
 const WEEKDAYS_LONG = [
-  'Sonntag',
   'Montag',
   'Dienstag',
   'Mittwoch',
   'Donnerstag',
   'Freitag',
-  'Samstag',
 ]
+
 const MONTHS = [
   'Januar',
   'Februar',
@@ -47,6 +47,7 @@ const MONTHS = [
   'November',
   'Dezember',
 ]
+
 const MONTHS_SHORT = [
   'Jan',
   'Feb',
@@ -74,35 +75,48 @@ function addDays(d: Date, n: number) {
   return next
 }
 
-// Mo=0, Su=6 — for a Monday-first calendar grid.
+// Mo=0, Tu=1, We=2, Th=3, Fr=4, Sa=5, Su=6
 function isoDayIndex(d: Date) {
   return (d.getDay() + 6) % 7
 }
 
 // Calendar from start of `today`'s month through end of the month containing the cutoff.
+// Only includes weekdays.
 function buildCalendarDays(today: Date, cutoff: Date) {
   const start = new Date(today.getFullYear(), today.getMonth(), 1)
   const end = new Date(cutoff.getFullYear(), cutoff.getMonth() + 1, 0)
   const days: Date[] = []
   const cur = new Date(start)
+
   while (cur <= end) {
-    days.push(new Date(cur))
+    const day = cur.getDay()
+    const isWeekend = day === 0 || day === 6
+
+    if (!isWeekend) {
+      days.push(new Date(cur))
+    }
+
     cur.setDate(cur.getDate() + 1)
   }
+
   return days
 }
 
 function groupByMonth(days: Date[]) {
   const groups: Array<{ key: string; label: string; days: Date[] }> = []
+
   for (const d of days) {
     const key = `${d.getFullYear()}-${d.getMonth()}`
     let g = groups[groups.length - 1]
+
     if (!g || g.key !== key) {
       g = { key, label: MONTHS[d.getMonth()], days: [] }
       groups.push(g)
     }
+
     g.days.push(d)
   }
+
   return groups
 }
 
@@ -124,10 +138,12 @@ export function BookSlotDialog({
 
   const today = React.useMemo(() => startOfDay(new Date()), [])
   const cutoff = React.useMemo(() => addDays(today, DAYS_AHEAD - 1), [today])
+
   const days = React.useMemo(
     () => buildCalendarDays(today, cutoff),
     [today, cutoff],
   )
+
   const groups = React.useMemo(() => groupByMonth(days), [days])
 
   React.useEffect(() => {
@@ -137,6 +153,7 @@ export function BookSlotDialog({
         setSelectedDate(null)
         setSelectedHours([])
       }, 150)
+
       return () => clearTimeout(t)
     }
   }, [open])
@@ -145,14 +162,19 @@ export function BookSlotDialog({
   const createReservations = useCreateReservations()
 
   const bookedHours = new Map<number, string>()
+
   for (const r of dayReservations.data ?? []) {
     bookedHours.set(r.slot_hour, r.display_name)
   }
 
   function toggleHour(h: number) {
     if (bookedHours.has(h)) return
+
     setSelectedHours((prev) => {
-      if (prev.includes(h)) return prev.filter((x) => x !== h)
+      if (prev.includes(h)) {
+        return prev.filter((x) => x !== h)
+      }
+
       return [...prev, h]
     })
   }
@@ -161,13 +183,17 @@ export function BookSlotDialog({
   const selectedRuns = groupConsecutiveHours(sortedSelected)
 
   const summaryDate = selectedDate ? parseDateKey(selectedDate) : null
+
   const summary =
     summaryDate && selectedRuns.length > 0
-      ? `${WEEKDAYS_LONG[summaryDate.getDay()]} ${summaryDate.getDate()}. ${MONTHS_SHORT[summaryDate.getMonth()]}, ${formatHourRanges(selectedRuns)}`
+      ? `${WEEKDAYS_LONG[isoDayIndex(summaryDate)]} ${summaryDate.getDate()}. ${
+          MONTHS_SHORT[summaryDate.getMonth()]
+        }, ${formatHourRanges(selectedRuns)}`
       : null
 
   async function confirm() {
     if (!machine || !user || !selectedDate || sortedSelected.length === 0) return
+
     try {
       await createReservations.mutateAsync({
         machineId: machine.id,
@@ -175,11 +201,13 @@ export function BookSlotDialog({
         date: selectedDate,
         hours: sortedSelected,
       })
+
       toast.success('Buchung gespeichert.')
       onOpenChange(false)
     } catch (err) {
       const message =
         err instanceof Error ? err.message : 'Buchung fehlgeschlagen.'
+
       toast.error(message)
     }
   }
@@ -188,8 +216,8 @@ export function BookSlotDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md sm:rounded-3xl bg-white text-zinc-900">
-        <DialogHeader className="border-zinc-200">
+      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden bg-white text-zinc-900 sm:max-w-md sm:rounded-3xl">
+        <DialogHeader className="shrink-0 border-zinc-200">
           <DialogTitle>{machine.name}</DialogTitle>
           <p className="text-sm text-zinc-500">
             {step === 'day' ? 'Tag auswählen' : 'Zeitraum auswählen'}
@@ -197,70 +225,78 @@ export function BookSlotDialog({
         </DialogHeader>
 
         {step === 'day' && (
-          <ScrollArea className="max-h-[60vh]">
-            <div className="px-6 pb-6 pt-4">
-              <div className="sticky top-0 z-10 grid grid-cols-7 bg-white pb-2 pt-2 text-center text-xs font-medium uppercase tracking-wide text-zinc-400">
-                {WEEKDAYS_SHORT.map((w) => (
-                  <span key={w}>{w}</span>
-                ))}
-              </div>
-
-              <div className="space-y-8">
-                {groups.map((group) => (
-                  <section key={group.key}>
-                    <h2 className="mb-3 text-2xl font-bold tracking-tight">
-                      {group.label}
-                    </h2>
-                    <div className="grid grid-cols-7 gap-y-3 text-center">
-                      {Array.from({ length: isoDayIndex(group.days[0]) }).map(
-                        (_, i) => (
-                          <div key={`pad-${i}`} />
-                        ),
-                      )}
-                      {group.days.map((d) => {
-                        const key = dateKey(d)
-                        const inWindow = d >= today && d <= cutoff
-                        const selected = key === selectedDate
-                        const isToday = d.getTime() === today.getTime()
-                        return (
-                          <button
-                            type="button"
-                            key={key}
-                            onClick={() => inWindow && setSelectedDate(key)}
-                            disabled={!inWindow}
-                            className={cn(
-                              'mx-auto grid h-10 w-10 place-items-center rounded-full text-base font-medium transition-colors',
-                              selected && 'bg-zinc-900 text-white',
-                              !selected &&
-                                inWindow &&
-                                'text-zinc-900 hover:bg-zinc-100',
-                              !selected &&
-                                !inWindow &&
-                                'cursor-not-allowed text-zinc-300',
-                              isToday && !selected && 'ring-1 ring-zinc-300',
-                            )}
-                            aria-pressed={selected}
-                            aria-label={`${WEEKDAYS_SHORT[isoDayIndex(d)]} ${d.getDate()}.`}
-                          >
-                            {d.getDate()}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </section>
-                ))}
-              </div>
+          <div className="flex min-h-0 flex-col">
+            <div className="grid grid-cols-5 bg-white px-6 pb-2 pt-4 text-center text-xs font-medium uppercase tracking-wide text-zinc-400">
+              {WEEKDAYS_SHORT.map((w) => (
+                <span key={w}>{w}</span>
+              ))}
             </div>
-          </ScrollArea>
-        )}
+
+              <ScrollArea className="h-[45vh] max-h-[420px]">
+                <div className="px-6 pb-6">
+                  <div className="space-y-8">
+                    {groups.map((group) => (
+                      <section key={group.key}>
+                        <h2 className="mb-3 text-2xl font-bold tracking-tight">
+                          {group.label}
+                        </h2>
+
+                        <div className="grid grid-cols-5 gap-y-3 text-center">
+                          {Array.from({
+                            length: Math.min(isoDayIndex(group.days[0]), 4),
+                          }).map((_, i) => (
+                            <div key={`pad-${i}`} />
+                          ))}
+
+                          {group.days.map((d) => {
+                            const key = dateKey(d)
+                            const inWindow = d >= today && d <= cutoff
+                            const selected = key === selectedDate
+                            const isToday = d.getTime() === today.getTime()
+
+                            return (
+                              <button
+                                type="button"
+                                key={key}
+                                onClick={() => inWindow && setSelectedDate(key)}
+                                disabled={!inWindow}
+                                className={cn(
+                                  'mx-auto grid h-10 w-10 place-items-center rounded-full text-base font-medium transition-colors',
+                                  selected && 'bg-zinc-900 text-white',
+                                  !selected &&
+                                    inWindow &&
+                                    'text-zinc-900 hover:bg-zinc-100',
+                                  !selected &&
+                                    !inWindow &&
+                                    'cursor-not-allowed text-zinc-300',
+                                  isToday && !selected && 'ring-1 ring-zinc-300',
+                                )}
+                                aria-pressed={selected}
+                                aria-label={`${
+                                  WEEKDAYS_SHORT[isoDayIndex(d)]
+                                } ${d.getDate()}.`}
+                              >
+                                {d.getDate()}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                </div>
+              </ScrollArea>
+            </div>
+          )}
 
         {step === 'time' && selectedDate && (
-          <ScrollArea className="max-h-[55vh]">
+          <ScrollArea className="min-h-0 flex-1">
             <div className="space-y-2 px-6 py-5">
               {SLOT_HOURS.map((h) => {
                 const reservedBy = bookedHours.get(h)
                 const isReserved = !!reservedBy
                 const isSelected = sortedSelected.includes(h)
+
                 return (
                   <button
                     type="button"
@@ -286,6 +322,7 @@ export function BookSlotDialog({
                       {formatHour(h)}
                       {isSelected && <CheckIcon />}
                     </span>
+
                     {isReserved && (
                       <span className="text-sm font-normal text-zinc-500">
                         Reserviert von {reservedBy}
@@ -298,15 +335,17 @@ export function BookSlotDialog({
           </ScrollArea>
         )}
 
-        <DialogFooter className="border-zinc-200">
+        <DialogFooter className="shrink-0 border-zinc-200">
           {step === 'day' && (
             <>
               {summaryDate && (
                 <p className="text-center text-sm text-zinc-500">
-                  {WEEKDAYS_LONG[summaryDate.getDay()]}{' '}
-                  {summaryDate.getDate()}. {MONTHS_SHORT[summaryDate.getMonth()]}
+                  {WEEKDAYS_LONG[isoDayIndex(summaryDate)]}{' '}
+                  {summaryDate.getDate()}.{' '}
+                  {MONTHS_SHORT[summaryDate.getMonth()]}
                 </p>
               )}
+
               <Button
                 size="lg"
                 disabled={!selectedDate}
@@ -316,11 +355,13 @@ export function BookSlotDialog({
               </Button>
             </>
           )}
+
           {step === 'time' && (
             <>
               {summary && (
                 <p className="text-center text-sm text-zinc-500">{summary}</p>
               )}
+
               <Button
                 size="lg"
                 disabled={
@@ -332,11 +373,8 @@ export function BookSlotDialog({
                   ? 'Speichern…'
                   : 'Buchung abschließen'}
               </Button>
-              <Button
-                variant="ghost"
-                size="lg"
-                onClick={() => setStep('day')}
-              >
+
+              <Button variant="ghost" size="lg" onClick={() => setStep('day')}>
                 Zurück
               </Button>
             </>
