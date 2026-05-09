@@ -16,13 +16,23 @@ import {
   SLOT_HOURS,
   dateKey,
   formatHour,
-  formatHourRange,
+  formatHourRanges,
+  groupConsecutiveHours,
   parseDateKey,
 } from '@/lib/slots'
 import { useAuth } from '@/lib/auth'
 import type { Machine } from '@/hooks/use-machines'
 
-const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']
+const WEEKDAYS_SHORT = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
+const WEEKDAYS_LONG = [
+  'Sonntag',
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+]
 const MONTHS = [
   'Januar',
   'Februar',
@@ -51,28 +61,33 @@ const MONTHS_SHORT = [
   'Nov',
   'Dez',
 ]
-const WEEKDAYS_LONG = [
-  'Sonntag',
-  'Montag',
-  'Dienstag',
-  'Mittwoch',
-  'Donnerstag',
-  'Freitag',
-  'Samstag',
-]
 
-const DAYS_AHEAD = 60
+const DAYS_AHEAD = 60 // inclusive of today
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate())
 }
 
-function buildUpcomingDays(today: Date, count: number) {
+function addDays(d: Date, n: number) {
+  const next = new Date(d)
+  next.setDate(d.getDate() + n)
+  return next
+}
+
+// Mo=0, Su=6 — for a Monday-first calendar grid.
+function isoDayIndex(d: Date) {
+  return (d.getDay() + 6) % 7
+}
+
+// Calendar from start of `today`'s month through end of the month containing the cutoff.
+function buildCalendarDays(today: Date, cutoff: Date) {
+  const start = new Date(today.getFullYear(), today.getMonth(), 1)
+  const end = new Date(cutoff.getFullYear(), cutoff.getMonth() + 1, 0)
   const days: Date[] = []
-  for (let i = 0; i < count; i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    days.push(d)
+  const cur = new Date(start)
+  while (cur <= end) {
+    days.push(new Date(cur))
+    cur.setDate(cur.getDate() + 1)
   }
   return days
 }
@@ -108,15 +123,15 @@ export function BookSlotDialog({
   const [selectedHours, setSelectedHours] = React.useState<number[]>([])
 
   const today = React.useMemo(() => startOfDay(new Date()), [])
+  const cutoff = React.useMemo(() => addDays(today, DAYS_AHEAD - 1), [today])
   const days = React.useMemo(
-    () => buildUpcomingDays(today, DAYS_AHEAD),
-    [today],
+    () => buildCalendarDays(today, cutoff),
+    [today, cutoff],
   )
   const groups = React.useMemo(() => groupByMonth(days), [days])
 
   React.useEffect(() => {
     if (!open) {
-      // reset on close
       const t = setTimeout(() => {
         setStep('day')
         setSelectedDate(null)
@@ -137,28 +152,22 @@ export function BookSlotDialog({
   function toggleHour(h: number) {
     if (bookedHours.has(h)) return
     setSelectedHours((prev) => {
-      if (prev.includes(h)) return prev.filter((x) => x !== h).sort((a, b) => a - b)
-      return [...prev, h].sort((a, b) => a - b)
+      if (prev.includes(h)) return prev.filter((x) => x !== h)
+      return [...prev, h]
     })
   }
 
   const sortedSelected = [...selectedHours].sort((a, b) => a - b)
-  const isContiguous =
-    sortedSelected.length === 0 ||
-    sortedSelected.every((h, i) => i === 0 || h === sortedSelected[i - 1] + 1)
+  const selectedRuns = groupConsecutiveHours(sortedSelected)
 
   const summaryDate = selectedDate ? parseDateKey(selectedDate) : null
   const summary =
-    summaryDate && sortedSelected.length > 0
-      ? `${WEEKDAYS_LONG[summaryDate.getDay()]} ${summaryDate.getDate()}. ${MONTHS_SHORT[summaryDate.getMonth()]}, ${formatHourRange(sortedSelected[0], sortedSelected[sortedSelected.length - 1] + 1)}`
+    summaryDate && selectedRuns.length > 0
+      ? `${WEEKDAYS_LONG[summaryDate.getDay()]} ${summaryDate.getDate()}. ${MONTHS_SHORT[summaryDate.getMonth()]}, ${formatHourRanges(selectedRuns)}`
       : null
 
   async function confirm() {
     if (!machine || !user || !selectedDate || sortedSelected.length === 0) return
-    if (!isContiguous) {
-      toast.error('Bitte zusammenhängende Stunden auswählen.')
-      return
-    }
     try {
       await createReservations.mutateAsync({
         machineId: machine.id,
@@ -189,44 +198,58 @@ export function BookSlotDialog({
 
         {step === 'day' && (
           <ScrollArea className="max-h-[60vh]">
-            <div className="space-y-8 px-6 py-6">
-              {groups.map((group) => (
-                <section key={group.key}>
-                  <h2 className="mb-3 text-2xl font-bold tracking-tight">
-                    {group.label}
-                  </h2>
-                  <div className="grid grid-cols-7 gap-y-3 text-center">
-                    {Array.from({ length: group.days[0].getDay() }).map(
-                      (_, i) => (
-                        <div key={`pad-${i}`} />
-                      ),
-                    )}
-                    {group.days.map((d) => {
-                      const key = dateKey(d)
-                      const selected = key === selectedDate
-                      const isToday = d.getTime() === today.getTime()
-                      return (
-                        <button
-                          type="button"
-                          key={key}
-                          onClick={() => setSelectedDate(key)}
-                          className={cn(
-                            'mx-auto grid h-10 w-10 place-items-center rounded-full text-base font-medium transition-colors',
-                            selected
-                              ? 'bg-zinc-900 text-white'
-                              : 'text-zinc-900 hover:bg-zinc-100',
-                            isToday && !selected && 'ring-1 ring-zinc-300',
-                          )}
-                          aria-pressed={selected}
-                          aria-label={`${WEEKDAYS_SHORT[d.getDay()]} ${d.getDate()}.`}
-                        >
-                          {d.getDate()}
-                        </button>
-                      )
-                    })}
-                  </div>
-                </section>
-              ))}
+            <div className="px-6 pb-6 pt-4">
+              <div className="sticky top-0 z-10 grid grid-cols-7 bg-white pb-2 pt-2 text-center text-xs font-medium uppercase tracking-wide text-zinc-400">
+                {WEEKDAYS_SHORT.map((w) => (
+                  <span key={w}>{w}</span>
+                ))}
+              </div>
+
+              <div className="space-y-8">
+                {groups.map((group) => (
+                  <section key={group.key}>
+                    <h2 className="mb-3 text-2xl font-bold tracking-tight">
+                      {group.label}
+                    </h2>
+                    <div className="grid grid-cols-7 gap-y-3 text-center">
+                      {Array.from({ length: isoDayIndex(group.days[0]) }).map(
+                        (_, i) => (
+                          <div key={`pad-${i}`} />
+                        ),
+                      )}
+                      {group.days.map((d) => {
+                        const key = dateKey(d)
+                        const inWindow = d >= today && d <= cutoff
+                        const selected = key === selectedDate
+                        const isToday = d.getTime() === today.getTime()
+                        return (
+                          <button
+                            type="button"
+                            key={key}
+                            onClick={() => inWindow && setSelectedDate(key)}
+                            disabled={!inWindow}
+                            className={cn(
+                              'mx-auto grid h-10 w-10 place-items-center rounded-full text-base font-medium transition-colors',
+                              selected && 'bg-zinc-900 text-white',
+                              !selected &&
+                                inWindow &&
+                                'text-zinc-900 hover:bg-zinc-100',
+                              !selected &&
+                                !inWindow &&
+                                'cursor-not-allowed text-zinc-300',
+                              isToday && !selected && 'ring-1 ring-zinc-300',
+                            )}
+                            aria-pressed={selected}
+                            aria-label={`${WEEKDAYS_SHORT[isoDayIndex(d)]} ${d.getDate()}.`}
+                          >
+                            {d.getDate()}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
             </div>
           </ScrollArea>
         )}
@@ -298,17 +321,10 @@ export function BookSlotDialog({
               {summary && (
                 <p className="text-center text-sm text-zinc-500">{summary}</p>
               )}
-              {!isContiguous && (
-                <p className="text-center text-xs text-destructive">
-                  Bitte zusammenhängende Stunden auswählen.
-                </p>
-              )}
               <Button
                 size="lg"
                 disabled={
-                  sortedSelected.length === 0 ||
-                  !isContiguous ||
-                  createReservations.isPending
+                  sortedSelected.length === 0 || createReservations.isPending
                 }
                 onClick={confirm}
               >
@@ -348,4 +364,3 @@ function CheckIcon() {
     </svg>
   )
 }
-

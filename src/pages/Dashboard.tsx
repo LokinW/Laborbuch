@@ -20,11 +20,11 @@ type MyBooking = {
   ids: string[]
   machineId: string
   date: string
-  startHour: number
-  endHourExclusive: number
+  runs: Array<[number, number]>
 }
 
-// Combine consecutive same-machine, same-day reservations into one displayed booking.
+// Group all of a user's hours per (machine, date) into one booking, with multiple
+// runs of consecutive hours for display ("12 - 13 & 14 - 15 Uhr").
 function groupMyBookings(
   rows: { id: string; machine_id: string; slot_date: string; slot_hour: number }[],
 ): MyBooking[] {
@@ -42,24 +42,17 @@ function groupMyBookings(
   const out: MyBooking[] = []
   for (const bucket of buckets.values()) {
     const sorted = bucket.entries.sort((a, b) => a.hour - b.hour)
-    const hours = sorted.map((e) => e.hour)
-    const runs = groupConsecutiveHours(hours)
-    for (const [start, endExcl] of runs) {
-      const ids = sorted
-        .filter((e) => e.hour >= start && e.hour < endExcl)
-        .map((e) => e.id)
-      out.push({
-        ids,
-        machineId: bucket.machineId,
-        date: bucket.date,
-        startHour: start,
-        endHourExclusive: endExcl,
-      })
-    }
+    out.push({
+      ids: sorted.map((e) => e.id),
+      machineId: bucket.machineId,
+      date: bucket.date,
+      runs: groupConsecutiveHours(sorted.map((e) => e.hour)),
+    })
   }
   out.sort(
     (a, b) =>
-      a.date.localeCompare(b.date) || a.startHour - b.startHour,
+      a.date.localeCompare(b.date) ||
+      (a.runs[0]?.[0] ?? 0) - (b.runs[0]?.[0] ?? 0),
   )
   return out
 }
@@ -158,11 +151,10 @@ export default function DashboardPage() {
             <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
               {myBookings.map((b) => (
                 <MyReservationCard
-                  key={`${b.machineId}-${b.date}-${b.startHour}`}
+                  key={`${b.machineId}-${b.date}`}
                   machine={machinesById.get(b.machineId)}
                   date={b.date}
-                  startHour={b.startHour}
-                  endHourExclusive={b.endHourExclusive}
+                  runs={b.runs}
                   cancelling={deleteReservation.isPending}
                   onCancel={() => cancelBooking(b)}
                 />

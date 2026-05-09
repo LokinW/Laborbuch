@@ -15,6 +15,12 @@ export function formatHourRange(startHour: number, endHourExclusive: number) {
   return `${startHour} - ${endHourExclusive} Uhr`
 }
 
+// Format multiple runs as "12 - 13 & 14 - 15 Uhr".
+export function formatHourRanges(runs: Array<[number, number]>) {
+  if (runs.length === 0) return ''
+  return runs.map(([s, e]) => `${s} - ${e}`).join(' & ') + ' Uhr'
+}
+
 // Group an array of hours into runs of consecutive integers, ascending.
 export function groupConsecutiveHours(hours: number[]): Array<[number, number]> {
   if (hours.length === 0) return []

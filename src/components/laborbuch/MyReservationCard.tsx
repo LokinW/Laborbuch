@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { formatHourRange } from '@/lib/slots'
+import { formatHourRanges } from '@/lib/slots'
 import type { Machine } from '@/hooks/use-machines'
 import extrudor from '@/assets/extrudor.webp'
 
@@ -36,8 +36,7 @@ function formatGermanDate(dateStr: string) {
 type Props = {
   machine: Machine | undefined
   date: string
-  startHour: number
-  endHourExclusive: number
+  runs: Array<[number, number]>
   onCancel: () => void
   cancelling: boolean
 }
@@ -45,8 +44,7 @@ type Props = {
 export function MyReservationCard({
   machine,
   date,
-  startHour,
-  endHourExclusive,
+  runs,
   onCancel,
   cancelling,
 }: Props) {
@@ -75,7 +73,7 @@ export function MyReservationCard({
           )}
 
           <p className="text-sm font-regular text-success">
-            {formatGermanDate(date)}, {formatHourRange(startHour, endHourExclusive)}
+            {formatGermanDate(date)}, {formatHourRanges(runs)}
           </p>
         </div>
 
