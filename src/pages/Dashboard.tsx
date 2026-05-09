@@ -149,14 +149,11 @@ export default function DashboardPage() {
     <div className="flex min-h-svh flex-col">
       <AppHeader />
 
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 px-5 py-8">
+      <main className="mx-auto w-full max-w-7xl flex-1 space-y-10 px-5 py-8">
+      {(reservationsQ.isLoading || myBookings.length > 0) && (
         <Section title="Meine Termine">
           {reservationsQ.isLoading ? (
             <p className="text-sm text-muted-foreground">Lädt…</p>
-          ) : myBookings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Du hast aktuell keine Buchungen.
-            </p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {myBookings.map((b) => (
@@ -173,6 +170,7 @@ export default function DashboardPage() {
             </div>
           )}
         </Section>
+      )}
 
         {favoriteMachines.length > 0 && (
           <Section title="Favorisierte Geräte">
@@ -190,7 +188,7 @@ export default function DashboardPage() {
               Noch keine Geräte. Lege welche im Supabase-Dashboard an.
             </p>
           ) : (
-            <div className="rounded-2xl border border-border bg-card px-5">
+            <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
               {machines.map(renderMachineCard)}
             </div>
           )}
@@ -219,8 +217,8 @@ function Section({
   children: React.ReactNode
 }) {
   return (
-    <section className="space-y-3">
-      <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+    <section className="space-y-5">
+      <h2 className="text-2xl font-medium">
         {title}
       </h2>
       {children}

@@ -20,8 +20,8 @@ export function AppHeader() {
           aria-label="Konto"
           className="rounded-full ring-offset-black focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2"
         >
-          <Avatar className="h-10 w-10 bg-[#e0c8e8] text-black">
-            <AvatarFallback className="bg-[#e0c8e8] text-base font-semibold text-black">
+          <Avatar className="h-8 w-8 bg-[#e0c8e8] text-black">
+            <AvatarFallback className="bg-[#e0c8e8] text-base font-semibold text-white border-2 cursor-pointer hover:scale-[1.125] transition-transform">
               {initial}
             </AvatarFallback>
           </Avatar>

@@ -1,13 +1,11 @@
-// Plain text wordmark — swap for the pixel-font logo asset later.
-export function LaborbuchWordmark({ className }: { className?: string }) {
+import laborbuch from  '@/assets/laborbuch.png'
+
+export function LaborbuchWordmark() {
   return (
-    <span
-      className={
-        'inline-block select-none text-xl font-black tracking-tight text-white ' +
-        (className ?? '')
-      }
-    >
-      Laborbuch
-    </span>
+    <img
+    className='h-6 w-auto'
+    src={laborbuch} 
+    alt="Laborbuch" 
+    />
   )
 }

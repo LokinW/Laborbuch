@@ -26,7 +26,7 @@ function RedirectIfAuthed({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <div className="dark min-h-svh bg-background text-foreground">
+    <div className="light min-h-svh bg-background text-foreground">
       <Routes>
         <Route
           path="/login"
