@@ -67,7 +67,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
+              placeholder="•••"
             />
           </div>
 
@@ -76,7 +76,7 @@ export default function LoginPage() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Account vergessen oder gewünscht? Frag im Fablab nach.
+            Login Daten vergessen oder so? Louisa hilft.
           </p>
         </form>
       </main>

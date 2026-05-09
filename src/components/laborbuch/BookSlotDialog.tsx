@@ -80,9 +80,28 @@ function addDays(d: Date, n: number) {
   return next
 }
 
+function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
 // Mo=0, Tu=1, We=2, Th=3, Fr=4, Sa=5, Su=6
 function isoDayIndex(d: Date) {
   return (d.getDay() + 6) % 7
+}
+
+function formatRelativeDayLabel(d: Date, today: Date) {
+  const tomorrow = addDays(today, 1)
+
+  if (isSameDay(d, today)) return 'Heute'
+  if (isSameDay(d, tomorrow)) return 'Morgen'
+
+  return `${WEEKDAYS_LONG[isoDayIndex(d)]} ${d.getDate()}. ${
+    MONTHS_SHORT[d.getMonth()]
+  }`
 }
 
 // Calendar from start of `today`'s month through end of the month containing the cutoff.
@@ -149,19 +168,29 @@ export function BookSlotDialog({
     [today, cutoff],
   )
 
+  const defaultSelectedDate = React.useMemo(() => {
+    const firstAvailableDay = days.find((d) => d >= today && d <= cutoff)
+    return firstAvailableDay ? dateKey(firstAvailableDay) : null
+  }, [days, today, cutoff])
+
   const groups = React.useMemo(() => groupByMonth(days), [days])
 
   React.useEffect(() => {
-    if (!open) {
-      const t = setTimeout(() => {
-        setStep('day')
-        setSelectedDate(null)
-        setSelectedHours([])
-      }, 150)
-
-      return () => clearTimeout(t)
+    if (open) {
+      setStep('day')
+      setSelectedDate(defaultSelectedDate)
+      setSelectedHours([])
+      return
     }
-  }, [open])
+
+    const t = setTimeout(() => {
+      setStep('day')
+      setSelectedDate(defaultSelectedDate)
+      setSelectedHours([])
+    }, 150)
+
+    return () => clearTimeout(t)
+  }, [open, defaultSelectedDate])
 
   const calendarRange = React.useMemo(
     () => ({
@@ -170,32 +199,41 @@ export function BookSlotDialog({
     }),
     [today, cutoff],
   )
+
   const monthReservations = useMachineReservationsInRange(
     open && machine ? machine.id : null,
     calendarRange.from,
     calendarRange.to,
   )
+
   // Map<dateKey, Array<{userId, displayName}>> — unique users per day, in
   // insertion order (driven by query order).
   const usersByDate = React.useMemo(() => {
     const out = new Map<string, Array<{ userId: string; displayName: string }>>()
     const seen = new Map<string, Set<string>>()
+
     for (const r of monthReservations.data ?? []) {
       const date = r.slot_date
+
       let dateSeen = seen.get(date)
       if (!dateSeen) {
         dateSeen = new Set()
         seen.set(date, dateSeen)
       }
+
       if (dateSeen.has(r.user_id)) continue
+
       dateSeen.add(r.user_id)
+
       let bucket = out.get(date)
       if (!bucket) {
         bucket = []
         out.set(date, bucket)
       }
+
       bucket.push({ userId: r.user_id, displayName: r.display_name })
     }
+
     return out
   }, [monthReservations.data])
 
@@ -225,12 +263,13 @@ export function BookSlotDialog({
 
   const summaryDate = selectedDate ? parseDateKey(selectedDate) : null
 
-  const summary =
-    summaryDate && selectedRuns.length > 0
-      ? `${WEEKDAYS_LONG[isoDayIndex(summaryDate)]} ${summaryDate.getDate()}. ${
-          MONTHS_SHORT[summaryDate.getMonth()]
-        }, ${formatHourRanges(selectedRuns)}`
-      : null
+  const summary = summaryDate
+  ? selectedRuns.length > 0
+    ? `${formatRelativeDayLabel(summaryDate, today)}, ${formatHourRanges(
+        selectedRuns,
+      )}`
+    : formatRelativeDayLabel(summaryDate, today)
+  : null
 
   async function confirm() {
     if (!machine || !user || !selectedDate || sortedSelected.length === 0) return
@@ -257,10 +296,10 @@ export function BookSlotDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[85vh] flex-col overflow-hidden bg-white text-zinc-900 sm:max-w-md sm:rounded-3xl">
+      <DialogContent className="flex h-[80vh] w-full max-w-none flex-col overflow-hidden bg-white text-zinc-900 sm:h-auto sm:max-h-[85vh] sm:rounded-3xl">
         <DialogHeader className="shrink-0 border-zinc-200">
           <DialogTitle>{machine.name}</DialogTitle>
-          <p className="text-sm text-zinc-500">
+          <p className="text-md text-zinc-500">
             {step === 'day' ? 'Tag auswählen' : 'Zeitraum auswählen'}
           </p>
         </DialogHeader>
@@ -273,7 +312,7 @@ export function BookSlotDialog({
               ))}
             </div>
 
-            <ScrollArea className="h-[45vh] max-h-[420px]">
+            <ScrollArea className="h-[58vh] max-h-[560px] sm:h-[45vh] sm:max-h-[420px]">
               <div className="px-6 pb-6">
                 <div className="space-y-8">
                   {groups.map((group) => (
@@ -293,7 +332,7 @@ export function BookSlotDialog({
                           const key = dateKey(d)
                           const inWindow = d >= today && d <= cutoff
                           const selected = key === selectedDate
-                          const isToday = d.getTime() === today.getTime()
+                          const isToday = isSameDay(d, today)
                           const dayUsers = usersByDate.get(key) ?? []
 
                           return (
@@ -327,6 +366,7 @@ export function BookSlotDialog({
                               >
                                 {d.getDate()}
                               </button>
+
                               {dayUsers.length > 0 && (
                                 <div className="flex h-1.5 items-center justify-center gap-0.5">
                                   {dayUsers.slice(0, 3).map((u) => (
@@ -340,6 +380,7 @@ export function BookSlotDialog({
                                       aria-label={u.displayName}
                                     />
                                   ))}
+
                                   {dayUsers.length > 3 && (
                                     <span
                                       className="text-[10px] font-semibold leading-none text-zinc-500"
@@ -389,7 +430,7 @@ export function BookSlotDialog({
                     <span
                       className={cn(
                         'flex items-center gap-2',
-                        isReserved && 'text-zinc-400 line-through',
+                        isReserved && 'text-zinc-400 line-through font-normal',
                       )}
                     >
                       {formatHour(h)}
@@ -397,7 +438,7 @@ export function BookSlotDialog({
                     </span>
 
                     {isReserved && (
-                      <span className="text-sm font-normal text-zinc-500">
+                      <span className="text-sm font-normal text-zinc-400">
                         Reserviert von {reservedBy}
                       </span>
                     )}
@@ -412,10 +453,8 @@ export function BookSlotDialog({
           {step === 'day' && (
             <>
               {summaryDate && (
-                <p className="text-center text-sm text-zinc-500">
-                  {WEEKDAYS_LONG[isoDayIndex(summaryDate)]}{' '}
-                  {summaryDate.getDate()}.{' '}
-                  {MONTHS_SHORT[summaryDate.getMonth()]}
+                <p className="text-center text-md text-zinc-500">
+                  {formatRelativeDayLabel(summaryDate, today)}
                 </p>
               )}
 
@@ -432,24 +471,22 @@ export function BookSlotDialog({
           {step === 'time' && (
             <>
               {summary && (
-                <p className="text-center text-sm text-zinc-500">{summary}</p>
+                <p className="text-center text-md text-zinc-500">{summary}</p>
               )}
 
-              <Button
-                size="lg"
-                disabled={
-                  sortedSelected.length === 0 || createReservations.isPending
-                }
-                onClick={confirm}
-              >
-                {createReservations.isPending
-                  ? 'Speichern…'
-                  : 'Buchung abschließen'}
-              </Button>
-
-              <Button variant="ghost" size="lg" onClick={() => setStep('day')}>
-                Zurück
-              </Button>
+              <div className="flex flex-col">
+                <Button
+                  size="lg"
+                  disabled={
+                    sortedSelected.length === 0 || createReservations.isPending
+                  }
+                  onClick={confirm}
+                >
+                  {createReservations.isPending
+                    ? 'Speichern…'
+                    : 'Buchung abschließen'}
+                </Button>
+              </div>
             </>
           )}
         </DialogFooter>

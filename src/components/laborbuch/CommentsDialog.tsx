@@ -71,7 +71,7 @@ export function CommentsDialog({
       <DialogContent className="sm:max-w-md sm:rounded-3xl bg-white text-zinc-900">
         <DialogHeader className="border-zinc-200">
           <DialogTitle>{machine.name}</DialogTitle>
-          <p className="text-sm text-zinc-500">Kommentare</p>
+          <p className="text-md text-zinc-500">Kommentare</p>
         </DialogHeader>
 
         <ScrollArea className="max-h-[55vh]">

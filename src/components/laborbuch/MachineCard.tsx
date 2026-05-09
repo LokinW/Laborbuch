@@ -34,7 +34,7 @@ export function MachineCard({
         />
       </div>
   
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-0 w-full bg-gradient-to-tr from-white to-white/0" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-0 w-full bg-gradient-to-tr from-white to-white/20" />
   
       <div className="relative z-20 min-w-0 space-y-3 flex flex-col gap-8">
         <div className="space-y-0.5">
