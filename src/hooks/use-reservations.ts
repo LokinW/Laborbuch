@@ -53,6 +53,38 @@ export function useUpcomingReservations() {
   })
 }
 
+// All reservations for one machine in a date range (for calendar dots).
+export function useMachineReservationsInRange(
+  machineId: string | null,
+  fromDate: string | null,
+  toDate: string | null,
+) {
+  return useQuery({
+    enabled: !!machineId && !!fromDate && !!toDate,
+    queryKey: ['reservations', 'machine-range', machineId, fromDate, toDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reservations')
+        .select(
+          'id, machine_id, user_id, slot_date, slot_hour, profiles(display_name)',
+        )
+        .eq('machine_id', machineId!)
+        .gte('slot_date', fromDate!)
+        .lte('slot_date', toDate!)
+      if (error) throw error
+      const rows = (data ?? []) as unknown as ReservationJoinRow[]
+      return rows.map<ReservationWithUser>((r) => ({
+        id: r.id,
+        machine_id: r.machine_id,
+        user_id: r.user_id,
+        slot_date: r.slot_date,
+        slot_hour: r.slot_hour,
+        display_name: r.profiles?.display_name ?? 'Unbekannt',
+      }))
+    },
+  })
+}
+
 // Reservations for one machine on one date (for the time-slot picker).
 export function useDayReservations(machineId: string | null, date: string | null) {
   return useQuery({

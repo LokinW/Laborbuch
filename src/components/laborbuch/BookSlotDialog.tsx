@@ -11,7 +11,12 @@ import {
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { useDayReservations, useCreateReservations } from '@/hooks/use-reservations'
+import {
+  useCreateReservations,
+  useDayReservations,
+  useMachineReservationsInRange,
+} from '@/hooks/use-reservations'
+import { colorForUserId } from '@/lib/avatar-color'
 import {
   SLOT_HOURS,
   dateKey,
@@ -158,6 +163,42 @@ export function BookSlotDialog({
     }
   }, [open])
 
+  const calendarRange = React.useMemo(
+    () => ({
+      from: dateKey(new Date(today.getFullYear(), today.getMonth(), 1)),
+      to: dateKey(new Date(cutoff.getFullYear(), cutoff.getMonth() + 1, 0)),
+    }),
+    [today, cutoff],
+  )
+  const monthReservations = useMachineReservationsInRange(
+    open && machine ? machine.id : null,
+    calendarRange.from,
+    calendarRange.to,
+  )
+  // Map<dateKey, Array<{userId, displayName}>> — unique users per day, in
+  // insertion order (driven by query order).
+  const usersByDate = React.useMemo(() => {
+    const out = new Map<string, Array<{ userId: string; displayName: string }>>()
+    const seen = new Map<string, Set<string>>()
+    for (const r of monthReservations.data ?? []) {
+      const date = r.slot_date
+      let dateSeen = seen.get(date)
+      if (!dateSeen) {
+        dateSeen = new Set()
+        seen.set(date, dateSeen)
+      }
+      if (dateSeen.has(r.user_id)) continue
+      dateSeen.add(r.user_id)
+      let bucket = out.get(date)
+      if (!bucket) {
+        bucket = []
+        out.set(date, bucket)
+      }
+      bucket.push({ userId: r.user_id, displayName: r.display_name })
+    }
+    return out
+  }, [monthReservations.data])
+
   const dayReservations = useDayReservations(machine?.id ?? null, selectedDate)
   const createReservations = useCreateReservations()
 
@@ -232,36 +273,42 @@ export function BookSlotDialog({
               ))}
             </div>
 
-              <ScrollArea className="h-[45vh] max-h-[420px]">
-                <div className="px-6 pb-6">
-                  <div className="space-y-8">
-                    {groups.map((group) => (
-                      <section key={group.key}>
-                        <h2 className="mb-3 text-2xl font-bold tracking-tight">
-                          {group.label}
-                        </h2>
+            <ScrollArea className="h-[45vh] max-h-[420px]">
+              <div className="px-6 pb-6">
+                <div className="space-y-8">
+                  {groups.map((group) => (
+                    <section key={group.key}>
+                      <h2 className="mb-3 text-2xl font-bold tracking-tight">
+                        {group.label}
+                      </h2>
 
-                        <div className="grid grid-cols-5 gap-y-3 text-center">
-                          {Array.from({
-                            length: Math.min(isoDayIndex(group.days[0]), 4),
-                          }).map((_, i) => (
-                            <div key={`pad-${i}`} />
-                          ))}
+                      <div className="grid grid-cols-5 gap-y-3 text-center">
+                        {Array.from({
+                          length: Math.min(isoDayIndex(group.days[0]), 4),
+                        }).map((_, i) => (
+                          <div key={`pad-${i}`} />
+                        ))}
 
-                          {group.days.map((d) => {
-                            const key = dateKey(d)
-                            const inWindow = d >= today && d <= cutoff
-                            const selected = key === selectedDate
-                            const isToday = d.getTime() === today.getTime()
+                        {group.days.map((d) => {
+                          const key = dateKey(d)
+                          const inWindow = d >= today && d <= cutoff
+                          const selected = key === selectedDate
+                          const isToday = d.getTime() === today.getTime()
+                          const dayUsers = usersByDate.get(key) ?? []
 
-                            return (
+                          return (
+                            <div
+                              key={key}
+                              className="flex flex-col items-center gap-1"
+                            >
                               <button
                                 type="button"
-                                key={key}
-                                onClick={() => inWindow && setSelectedDate(key)}
+                                onClick={() =>
+                                  inWindow && setSelectedDate(key)
+                                }
                                 disabled={!inWindow}
                                 className={cn(
-                                  'mx-auto grid h-10 w-10 place-items-center rounded-full text-base font-medium transition-colors',
+                                  'grid h-10 w-10 place-items-center rounded-full text-base font-medium transition-colors',
                                   selected && 'bg-zinc-900 text-white',
                                   !selected &&
                                     inWindow &&
@@ -269,7 +316,9 @@ export function BookSlotDialog({
                                   !selected &&
                                     !inWindow &&
                                     'cursor-not-allowed text-zinc-300',
-                                  isToday && !selected && 'ring-1 ring-zinc-300',
+                                  isToday &&
+                                    !selected &&
+                                    'ring-1 ring-zinc-300',
                                 )}
                                 aria-pressed={selected}
                                 aria-label={`${
@@ -278,16 +327,40 @@ export function BookSlotDialog({
                               >
                                 {d.getDate()}
                               </button>
-                            )
-                          })}
-                        </div>
-                      </section>
-                    ))}
-                  </div>
+                              {dayUsers.length > 0 && (
+                                <div className="flex h-1.5 items-center justify-center gap-0.5">
+                                  {dayUsers.slice(0, 3).map((u) => (
+                                    <span
+                                      key={u.userId}
+                                      className="h-1.5 w-1.5 rounded-full"
+                                      style={{
+                                        background: colorForUserId(u.userId),
+                                      }}
+                                      title={u.displayName}
+                                      aria-label={u.displayName}
+                                    />
+                                  ))}
+                                  {dayUsers.length > 3 && (
+                                    <span
+                                      className="text-[10px] font-semibold leading-none text-zinc-500"
+                                      aria-label={`+${dayUsers.length - 3} weitere`}
+                                    >
+                                      +
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </section>
+                  ))}
                 </div>
-              </ScrollArea>
-            </div>
-          )}
+              </div>
+            </ScrollArea>
+          </div>
+        )}
 
         {step === 'time' && selectedDate && (
           <ScrollArea className="min-h-0 flex-1">
