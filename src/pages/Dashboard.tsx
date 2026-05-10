@@ -142,7 +142,7 @@ export default function DashboardPage() {
     <div className="flex min-h-svh flex-col">
       <AppHeader />
 
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 py-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 py-8 px-6 sm:px-0">
       {(reservationsQ.isLoading || myBookings.length > 0) && (
         <Section title="Meine Termine">
           {reservationsQ.isLoading ? (
