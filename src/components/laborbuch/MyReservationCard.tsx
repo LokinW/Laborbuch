@@ -2,15 +2,6 @@ import { Button } from '@/components/ui/button'
 import { formatHourRanges } from '@/lib/slots'
 import type { Machine } from '@/hooks/use-machines'
 
-const WEEKDAYS = [
-  'Sonntag',
-  'Montag',
-  'Dienstag',
-  'Mittwoch',
-  'Donnerstag',
-  'Freitag',
-  'Samstag',
-]
 const MONTHS = [
   'Jan',
   'Feb',
