@@ -48,13 +48,16 @@ export function MyReservationCard({
   cancelling,
 }: Props) {
   return (
-    <article className="relative bg-white flex flex-row overflow-hidden border-t sm:border-0 sm:outline sm:outline-1 sm:outline-border ">
-      <div className="bg-green-400 px-8 flex flex-col content-center justify-center justify-items-center">
+    <article className="relative bg-card flex flex-row overflow-hidden border-t sm:border-0 sm:outline sm:outline-1 sm:outline-border ">
+      <div className="bg-emerald-500 px-12 flex flex-col items-center justify-center">
         <div
-          className='text-md uppercase text-green-700'>{getGermanMonth(date)}</div>
+          className='text-md uppercase text-emerald-800'>
+            {getGermanMonth(date)}
+        </div>
         <div
-          className='text-4xl font-bold leading-tight text-green-800'
-        >{getDayOfMonth(date)}</div>
+          className='text-4xl font-bold leading-tight text-emerald-900'>
+            {getDayOfMonth(date)}
+        </div>
       </div>
 
       <div className="relative z-20 min-w-0 w-full space-y-3 flex flex-col gap-8 py-4 sm:px-4">

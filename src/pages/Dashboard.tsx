@@ -148,7 +148,7 @@ export default function DashboardPage() {
           {reservationsQ.isLoading ? (
             <p className="text-sm text-muted-foreground">Lädt…</p>
           ) : (
-            <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {myBookings.map((b) => (
                 <MyReservationCard
                   key={`${b.machineId}-${b.date}`}
@@ -166,7 +166,7 @@ export default function DashboardPage() {
 
         {favoriteMachines.length > 0 && (
           <Section title="Favorisierte Geräte">
-            <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {favoriteMachines.map(renderMachineCard)}
             </div>
           </Section>
@@ -180,7 +180,7 @@ export default function DashboardPage() {
               Noch keine Geräte. Lege welche im Supabase-Dashboard an.
             </p>
           ) : (
-            <div className="grid bg-card sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {machines.map(renderMachineCard)}
             </div>
           )}
