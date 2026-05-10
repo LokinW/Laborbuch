@@ -13,7 +13,7 @@ export function AppHeader() {
   const color = colorForUserId(user?.id)
 
   return (
-    <header className="sticky top-0 z-30 bg-black px-5 py-4 text-white">
+    <header className="sticky top-0 z-30 bg-black px-5 py-4 text-white border-b-1 border-zink-100">
       <div className="mx-auto flex max-w-5xl items-center justify-between">
         <LaborbuchWordmark />
         <button

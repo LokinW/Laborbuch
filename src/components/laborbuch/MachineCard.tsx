@@ -25,7 +25,7 @@ export function MachineCard({
   onToggleFavorite,
 }: Props) {
   return (
-    <article className="relative bg-white overflow-hidden border-t py-6 sm:border-0 sm:outline sm:outline-1 sm:outline-border sm:px-6">
+    <article className="relative bg-white overflow-hidden border-t py-4 sm:border-0 sm:outline sm:outline-1 sm:outline-border sm:px-4">
       <div className="absolute inset-y-0 right-0 z-0 w-2/3 translate-x-1/4">
         <img
           src={extrudor}
