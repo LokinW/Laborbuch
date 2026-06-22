@@ -15,6 +15,7 @@ import { useCommentCounts } from '@/hooks/use-comments'
 import { useFavorites, useToggleFavorite } from '@/hooks/use-favorites'
 import { useAuth } from '@/lib/auth'
 import { dateKey, groupConsecutiveHours } from '@/lib/slots'
+import { PaginatedCarousel } from '@/components/laborbuch/PaginatedCarousel'
 
 type MyBooking = {
   ids: string[]
@@ -142,14 +143,14 @@ export default function DashboardPage() {
     <div className="flex min-h-svh flex-col">
       <AppHeader />
 
-      <main className="mx-auto w-full max-w-5xl flex-1 space-y-10 py-8 px-6 sm:px-0">
+      <main className="mx-auto w-full max-w-4xl flex-1 space-y-10 py-8 px-8 sm:px-4">
       {(reservationsQ.isLoading || myBookings.length > 0) && (
         <Section title="Meine Termine">
           {reservationsQ.isLoading ? (
             <p className="text-sm text-muted-foreground">Lädt…</p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {myBookings.map((b) => (
+            <PaginatedCarousel
+              items={myBookings.map((b) => (
                 <MyReservationCard
                   key={`${b.machineId}-${b.date}`}
                   machine={machinesById.get(b.machineId)}
@@ -159,14 +160,14 @@ export default function DashboardPage() {
                   onCancel={() => cancelBooking(b)}
                 />
               ))}
-            </div>
+            />
           )}
         </Section>
       )}
 
         {favoriteMachines.length > 0 && (
           <Section title="Favorisierte Geräte">
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-2">
               {favoriteMachines.map(renderMachineCard)}
             </div>
           </Section>
@@ -180,7 +181,7 @@ export default function DashboardPage() {
               Noch keine Geräte. Lege welche im Supabase-Dashboard an.
             </p>
           ) : (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
               {machines.map(renderMachineCard)}
             </div>
           )}

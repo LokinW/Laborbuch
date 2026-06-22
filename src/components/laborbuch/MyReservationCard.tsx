@@ -1,4 +1,11 @@
+import { MoreVertical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { formatHourRanges } from '@/lib/slots'
 import type { Machine } from '@/hooks/use-machines'
 
@@ -8,10 +15,10 @@ const MONTHS = [
   'Mär',
   'Apr',
   'Mai',
-  'Juni',
-  'Juli',
+  'Jun',
+  'Jul',
   'Aug',
-  'Sept',
+  'Sep',
   'Okt',
   'Nov',
   'Dez',
@@ -48,44 +55,52 @@ export function MyReservationCard({
   cancelling,
 }: Props) {
   return (
-    <article className="relative bg-card flex flex-row overflow-hidden outline outline-1 outline-border ">
-      <div className="bg-emerald-500 px-12 flex flex-col items-center justify-center">
-        <div
-          className='text-md uppercase text-emerald-800'>
-            {getGermanMonth(date)}
+    <article className="relative bg-card flex flex-row overflow-hidden outline outline-1 outline-border rounded-lg">
+      <div className="bg-card px-12 flex flex-col items-center justify-center">
+        <div className="text-4xl font-semibold leading-tight tracking-tight text-primary">
+          {getDayOfMonth(date)}
         </div>
-        <div
-          className='text-4xl font-bold leading-tight text-emerald-900'>
-            {getDayOfMonth(date)}
+        <div className="text-md uppercase text-red-600 leading-tight">
+          {getGermanMonth(date)}
         </div>
       </div>
-
-      <div className="relative z-20 min-w-0 w-full space-y-3 flex flex-col gap-8 py-4 px-4">
-        <div className="space-y-0.5">
-          <h3 className="text-md font-semibold leading-tight">
+      <div className="relative min-w-0 w-full space-y-3 flex flex-col py-4 pr-4">
+        <div className="space-y-0.5 pr-8">
+          <h3 className="text-sm font-regular leading-tight">
             {machine?.name ?? '—'}
           </h3>
-
           {machine?.description && (
             <p className="text-sm text-muted-foreground">
               {machine.description}
             </p>
           )}
-
           <p className="text-sm font-regular text-muted-foreground">
             {formatHourRanges(runs)}
           </p>
         </div>
-
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={onCancel}
-          disabled={cancelling}
-        >
-          Absagen
-        </Button>
       </div>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-1 top-1 h-8 w-8 text-muted-foreground"
+            aria-label="Menü öffnen"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={onCancel}
+            disabled={cancelling}
+            className="text-destructive focus:text-destructive on-hover:cursor-pointer"
+          >
+            Absagen
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </article>
   )
 }

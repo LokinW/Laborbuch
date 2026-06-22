@@ -14,7 +14,7 @@ export function AppHeader() {
 
   return (
     <header className="sticky top-0 z-30 px-5 py-4 text-white border-b-2 border-muted bg-background/95">
-      <div className="mx-auto flex max-w-5xl items-center justify-between">
+      <div className="mx-auto flex max-w-4xl items-center justify-between">
         <LaborbuchWordmark />
         <button
           type="button"
